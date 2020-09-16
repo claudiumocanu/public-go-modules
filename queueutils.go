@@ -7,29 +7,70 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const SensorDiscoveryExchange = "SensorDiscovery"
 const SensorListQueue = "SensorList"
+const PersistReadingsQueue = "PersistReadings"
 
 func GetChannel(url string) (*amqp.Connection, *amqp.Channel) {
 	conn, err := amqp.Dial(url)
-	failOnError(err, "Failed to establish connection to message broker")
-
+	failOnError(err, "Failed to establish connection")
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to get channel for connection")
 
 	return conn, ch
 }
 
-func GetQueue(name string, ch *amqp.Channel) *amqp.Queue {
-	q, err := ch.QueueDeclare(
-		name,
-		false,
-		false,
-		false,
-		false,
-		nil)
+func GetQueue(name string, ch *amqp.Channel, autoDelete bool) *amqp.Queue {
+	declaration := QueueDeclaration{
+		Name:       name,
+		Durable:    false,
+		AutoDelete: autoDelete,
+		Exclusive:  false,
+		NoWait:     false,
+	}
 
-	failOnError(err, "Failed to get queue from channel")
-	return &q
+	q, err := declareQueue(declaration, ch)
+
+	failOnError(err, "Failed to get Queue from Channel")
+
+	return q
+}
+
+type Consumable interface {
+	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
+}
+
+func ConsumeQueue(ch Consumable, name string) (<-chan amqp.Delivery, error) {
+	return ch.Consume(
+		name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+}
+
+func declareQueue(declaration QueueDeclaration, ch *amqp.Channel) (*amqp.Queue, error) {
+	q, err := ch.QueueDeclare(
+		declaration.Name,
+		declaration.Durable,
+		declaration.AutoDelete,
+		declaration.Exclusive,
+		declaration.NoWait,
+		nil,
+	)
+
+	return &q, err
+}
+
+type QueueDeclaration struct {
+	Name       string
+	Durable    bool
+	AutoDelete bool
+	Exclusive  bool
+	NoWait     bool
 }
 
 func failOnError(err error, msg string) {
