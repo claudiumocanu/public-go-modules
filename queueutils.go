@@ -16,6 +16,7 @@ func GetChannel(url string) (*amqp.Connection, *amqp.Channel) {
 	failOnError(err, "Failed to establish connection")
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to get channel for connection")
+
 	return conn, ch
 }
 
