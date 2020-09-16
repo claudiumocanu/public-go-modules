@@ -1,4 +1,4 @@
-package qutils
+package publicgomodules
 
 import (
 	"fmt"

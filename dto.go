@@ -1,4 +1,4 @@
-package dto
+package publicgomodules
 
 import (
 	"encoding/gob"
